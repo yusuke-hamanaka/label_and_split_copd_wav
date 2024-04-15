@@ -1,3 +1,5 @@
+※recordings内のwavファイルはすべてダミーのファイル
+
 # 手順
 1. `python get_label_timestamps.py`
 2. `recordings`を選択
