@@ -3,12 +3,13 @@ import tkinter as tk
 import wave
 from decimal import ROUND_HALF_UP, Decimal
 from tkinter import filedialog, ttk
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 
-def wav2array(wav_file: str):
+def wav2array(wav_file: str) -> tuple:
     with wave.open(wav_file, "rb") as wav:
         nchannels, sampwidth, framerate, nframes, comptype, compname = wav.getparams()
         frames = wav.readframes(nframes)
@@ -19,7 +20,7 @@ def wav2array(wav_file: str):
 
 
 class SoundLabeling:
-    def __init__(self, wav_file) -> None:
+    def __init__(self, wav_file: str) -> None:
         self.wav_file = wav_file
         self.base_dir = os.path.dirname(os.path.dirname(wav_file))
         self.peep_frequencies = [970, 980, 990, 1000, 1010, 1020, 1030]
@@ -34,7 +35,7 @@ class SoundLabeling:
             1030: self.sound_types[6],
         }
         self.df = pd.DataFrame(columns=["start", "end", "sound_type"])
-        self.timestamps = {
+        self.timestamps: dict = {
             970: [],
             980: [],
             990: [],
@@ -44,7 +45,7 @@ class SoundLabeling:
             1030: [],
         }
 
-    def get_peep_timestamps(self):
+    def get_peep_timestamps(self) -> None:
         frames, _, framerate = wav2array(wav_file=self.wav_file)
         block_size = int(framerate * 0.25)
         num_blocks = len(frames) // block_size
@@ -74,7 +75,7 @@ class SoundLabeling:
 
         self.timestamps[970].append(len(frames) / framerate)
 
-    def timestamp_to_df(self):
+    def timestamp_to_df(self) -> None:
         for i in range(3):  # 3回の録音分処理を繰り返す
             for key, _ in self.timestamps.items():
                 start_freq = key
@@ -86,7 +87,9 @@ class SoundLabeling:
                     [
                         self.df,
                         pd.DataFrame(
-                            [[start_time, end_time, sound_type]],
+                            [
+                                [start_time, end_time, f"{sound_type}_{i + 1:02d}"]
+                            ],  # 01, 02, 03のように喘息データセットと同様の名前になるようにゼロ埋めする。
                             columns=["start", "end", "sound_type"],
                         ),
                     ],
@@ -96,27 +99,13 @@ class SoundLabeling:
 
         file_name = self.wav_file.split("/")[-1]
         txt_path = f"{file_name.split('.')[0]}.txt"
-        self.df.to_csv(f"{self.base_dir}/{txt_path}", sep="\t", index=False, header=False)
-
-
-def separate_wav_from_label_file(file_name_wo_extension):
-    label_file = f"{file_name_wo_extension}.txt"
-    wav_file = f"{file_name_wo_extension}.wav"
-
-    if not os.path.exists(label_file) or not os.path.exists(wav_file):
-        print("Label file or wav file does not exist.")
-        return
-
-    with open(label_file, "r") as f:
-        lines = f.readlines()
-    for line in lines:
-        start, end, sound_type = line.strip().split("\t")
-        start = float(start)
-        end = float(end)
+        self.df.to_csv(
+            f"{self.base_dir}/{txt_path}", sep="\t", index=False, header=False
+        )
 
 
 class ProgressBarWindow(tk.Toplevel):
-    def __init__(self, master, total_files):
+    def __init__(self, master: Any, total_files: Any):
         super().__init__(master)
         self.title("処理中")
 
@@ -135,13 +124,13 @@ class ProgressBarWindow(tk.Toplevel):
         self.button = tk.Button(self, text="キャンセル", command=self.destroy)
         self.button.pack(pady=10)
 
-    def update_progress(self, value):
+    def update_progress(self, value: Any) -> None:
         self.progress["value"] = value
         self.update()
 
 
 class SoundLabelingApp:
-    def __init__(self, master):
+    def __init__(self, master: Any) -> None:
         self.master = master
         master.title("Sound Labeling App")
 
@@ -155,12 +144,12 @@ class SoundLabelingApp:
         )
         self.select_folder_button.pack(pady=10)
 
-    def select_and_process_folder(self):
+    def select_and_process_folder(self) -> None:
         folder_selected = filedialog.askdirectory()
         if folder_selected:
             self.make_label_file(folder_selected)
 
-    def make_label_file(self, folder_path):
+    def make_label_file(self, folder_path: str) -> None:
         wav_files = [
             f
             for f in os.listdir(folder_path)
@@ -186,7 +175,7 @@ class SoundLabelingApp:
         progress_window.destroy()
 
 
-def main():
+def main() -> None:
     root = tk.Tk()
     app = SoundLabelingApp(root)
     root.mainloop()
@@ -194,7 +183,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # wav_file_path = "240219_05.WAV"
-    # sl = SoundLabeling(wav_file_path)
-    # sl.get_peep_timestamps()
-    # sl.timestamp_to_df()
