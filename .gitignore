@@ -1,0 +1,4 @@
+**/*.wav
+**/*.WAV
+**/*.txt
+.mypy_cache

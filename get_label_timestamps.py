@@ -97,11 +97,8 @@ class SoundLabeling:
                 )
                 self.timestamps[start_freq].pop(0)
 
-        file_name = self.wav_file.split("/")[-1]
-        txt_path = f"{file_name.split('.')[0]}.txt"
-        self.df.to_csv(
-            f"{self.base_dir}/{txt_path}", sep="\t", index=False, header=False
-        )
+        txt_file_path = f"{self.wav_file.split('.')[0]}_tmp.txt"
+        self.df.to_csv(txt_file_path, sep="\t", index=False, header=False)
 
 
 class ProgressBarWindow(tk.Toplevel):
@@ -150,18 +147,20 @@ class SoundLabelingApp:
             self.make_label_file(folder_selected)
 
     def make_label_file(self, folder_path: str) -> None:
-        wav_files = [
-            f
-            for f in os.listdir(folder_path)
-            if f.endswith(".wav") or f.endswith(".WAV")
-        ]
-        total_files = len(wav_files)
+        wav_files_full_path = []
+
+        # os.walkを使用してディレクトリを再帰的に探索
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.lower().endswith(".wav"):
+                    # フルパスをwav_filesに追加
+                    wav_files_full_path.append(os.path.join(root, file))
+        total_files = len(wav_files_full_path)
 
         # プログレスバーを含む新しいウィンドウを開く
         progress_window = ProgressBarWindow(self.master, total_files)
 
-        for i, filename in enumerate(wav_files, start=1):
-            wav_file_path = os.path.join(folder_path, filename)
+        for i, wav_file_path in enumerate(wav_files_full_path, start=1):
             print(f"Processing {wav_file_path}...")
             sl = SoundLabeling(wav_file_path)
             sl.get_peep_timestamps()

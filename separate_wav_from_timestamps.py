@@ -6,19 +6,14 @@ from pydub import AudioSegment
 
 
 def split_wav_from_timestamps(folder_name: str = "recordings") -> None:
-    # folder_name配下にあるすべてのサブフォルダを取得
-    subfolders = [
-        os.path.join(folder_name, subfolder)
-        for subfolder in os.listdir(folder_name)
-        if os.path.isdir(os.path.join(folder_name, subfolder))
-    ]
+    wav_files_full_path = []
+    for root, _, files in os.walk(folder_name):
+        for file in files:
+            if file.lower().endswith(".wav"):
+                wav_files_full_path.append(os.path.join(root, file))
 
-    for subfolder in subfolders:
-        wav_file_name = [
-            f for f in os.listdir(subfolder) if f.endswith((".wav", ".WAV"))
-        ][0]
-        wav_file = os.path.join(subfolder, wav_file_name)
-        timestamps_file = os.path.join(subfolder, f"{wav_file_name.split('.')[0]}.txt")
+    for wav_file in wav_files_full_path:
+        timestamps_file = f"{wav_file.split('.')[0]}.txt"
 
         # オーディオファイルを読み込み、チャンネルを分割した後、サチっていないかつ音量の大きいチャンネルを選択
         audio = AudioSegment.from_wav(wav_file)
@@ -34,8 +29,11 @@ def split_wav_from_timestamps(folder_name: str = "recordings") -> None:
             end_time = int(row["end"] * 1000)
             segment = selected_channel[start_time:end_time]
 
+            save_folder = "./release"
+            machine_type = os.path.dirname(wav_file).split(os.sep)[-1]
+            patient_id = os.path.basename(wav_file).split("_")[0]
             output_file_name = (
-                f"{os.path.basename(subfolder)}_1_{row['sound_type']}.wav"
+                f"{save_folder}/{machine_type}/{patient_id}_1_{row['sound_type']}.wav"
             )
             segment.export(output_file_name, format="wav")
 
