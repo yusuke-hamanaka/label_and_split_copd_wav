@@ -1,5 +1,3 @@
-※recordings内のwavファイルはすべてダミーのファイル
-
 # 手順
 1. `speech`内に、`{id}_(smartphone_)?.*.wav`の命名規則に該当するwavファイルを格納する
 2. `python directory_organizer.py`を実行すると、`recordings/SP001/ic_recorder/*.wav`のようにディレクトリが構成される
