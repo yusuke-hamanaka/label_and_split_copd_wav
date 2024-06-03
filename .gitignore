@@ -2,3 +2,5 @@
 **/*.WAV
 **/*.txt
 .mypy_cache
+*exe
+label_splitter
