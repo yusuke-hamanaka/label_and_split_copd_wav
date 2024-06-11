@@ -6,18 +6,15 @@ import shutil
 def organize_files(folder_path: str) -> None:
     """
     speechディレクトリ内にあるファイルを以下の要件に従って、recordingsディレクトリに移動する
-    - ファイル名は"{id}_*.wav"、または"{id}_smartphone_*.wav"
-    - idはSPまたはSNから始まり、三桁の数字が続く（例：SP001）
-    - idの末尾にはA, B, Cがついている場合がある
-    - B, Cがidの末尾につくファイルは無視する。
+    - ファイル名は、または"{id}_(TL15|IP13|IP14)_*.wav"
+    - idはHCまたはPCから始まり、三桁の数字が続く（例：SP001）
     - idと同じ名前のディレクトリをrecordingsに作成する。
-    - ただし、id名の末尾にAがついている場合は、idの末尾のAを除いた名前のディレクトリを作成する。
     - recordings内のid名のディレクトリの中に、ic_recorder、smartphoneディレクトリを作成する
     - ic_recorderディレクトリには{id}_*.wavを移動する
     - smartphoneディレクトリには{id}_smartphone_*.wavを移動する
     """
     # パターンの定義
-    pattern = re.compile(r"^(SP|SN)\d{3}[A|B|C]?(_smartphone)?_.*\.wav$")
+    pattern = re.compile(r"^(HC|PC)\d{3}_(TL15|IP13|IP14)_.*\.wav$")
 
     # recordingsディレクトリのパス
     recordings_path = os.path.join(folder_path, "recordings")
@@ -34,16 +31,7 @@ def organize_files(folder_path: str) -> None:
             print(file_name)
             parts = file_name.split("_")
             id_part = parts[0]
-
-            # B, Cが末尾につくファイルは無視
-            if id_part.endswith("B") or id_part.endswith("C"):
-                continue
-
-            # ディレクトリ名の調整
-            if id_part.endswith("A"):
-                dir_name = id_part[:-1]
-            else:
-                dir_name = id_part
+            dir_name = id_part
 
             # recordings内のターゲットディレクトリ
             target_dir = os.path.join(recordings_path, dir_name)
@@ -60,10 +48,12 @@ def organize_files(folder_path: str) -> None:
 
             # ファイルの移動
             source_file = os.path.join(speech_path, file_name)
-            if "smartphone" in file_name:
+            if "TL15" in file_name:
+                destination_file = os.path.join(ic_recorder_dir, file_name)
+            elif ("IP13" in file_name) or ("IP14" in file_name):
                 destination_file = os.path.join(smartphone_dir, file_name)
             else:
-                destination_file = os.path.join(ic_recorder_dir, file_name)
+                raise ValueError(f"Unexpected file name: {file_name}")
 
             shutil.copyfile(source_file, destination_file)
 
