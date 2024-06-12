@@ -13,27 +13,37 @@ def split_wav_from_timestamps(folder_name: str = "recordings") -> None:
         for file in files:
             if file.lower().endswith(".wav"):
                 wav_files_full_path.append(os.path.join(root, file))
-
+    print(root)
+    selected_channel_logger = pd.DataFrame(columns=["device", "wav_file", "selected_channel", "rms_level"])
     for wav_file in wav_files_full_path:
         timestamps_file = f"{wav_file.split('.')[0]}.txt"
-
         audio = AudioSegment.from_wav(wav_file)
-        channels = audio.split_to_mono()
-        selected_channel = get_louder_and_unsaturated_channel(channels)
 
         timestamps_df = pd.read_csv(timestamps_file, sep="\t", header=None, names=["start", "end", "sound_type"])
         for _, row in timestamps_df.iterrows():
             start_time = int(row["start"] * 1000)
             end_time = int(row["end"] * 1000)
-            segment = selected_channel[start_time:end_time]
+            channels_segmented = audio[start_time:end_time].split_to_mono()
+            selected_channel, index = get_louder_and_unsaturated_channel(channels_segmented)
+            segment = selected_channel
 
             current_folder = os.getcwd()
             save_folder = f"{current_folder}/release"
             machine_type = os.path.dirname(wav_file).split(os.sep)[-1]
             patient_id = os.path.basename(wav_file).split("_")[0]
             output_file_name = f"{save_folder}/{machine_type}/{patient_id}_1_{row['sound_type']}.wav"
+            selected_channel_logger = pd.concat([
+                selected_channel_logger,
+                pd.DataFrame({
+                    "device": [machine_type],
+                    "wav_file": [f"{patient_id}_1_{row['sound_type']}"],
+                    "selected_channel": index,
+                    "rms_level": [selected_channel.rms]
+                })
+            ], ignore_index=True)
             os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
             segment.export(output_file_name, format="wav")
+    selected_channel_logger.to_csv(f"{current_folder}/selected_channel.csv", index=False)
 
 
 def get_louder_and_unsaturated_channel(channels: list[AudioSegment]) -> AudioSegment:
@@ -50,7 +60,7 @@ def get_louder_and_unsaturated_channel(channels: list[AudioSegment]) -> AudioSeg
         rms_levels = [channel.rms for channel in channels]
         selected_channel_index = np.argmax(rms_levels)
         print(f"rms levels: {rms_levels}, selected channel: {selected_channel_index}")
-    return channels[selected_channel_index]
+    return channels[selected_channel_index], selected_channel_index
 
 
 def run_split_wav() -> None:
