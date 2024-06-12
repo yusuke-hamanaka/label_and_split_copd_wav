@@ -1,6 +1,7 @@
 ※ recordings内のwavファイルはすべてダミーのファイル
 
 # 手順
+
 1. `speech`内に、`{id}_(TL15|IP13|IP14)_*.wav`の命名規則に該当するwavファイルを格納する
 2. `python directory_organizer.py`を実行すると、`recordings/HC001/ic_recorder/*.wav`のようにディレクトリが構成される
 3. `python get_label_timestamps.py`を実行し、`recordings`フォルダを選択する

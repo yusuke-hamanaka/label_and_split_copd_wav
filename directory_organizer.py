@@ -7,7 +7,7 @@ def organize_files(folder_path: str) -> None:
     """
     speechディレクトリ内にあるファイルを以下の要件に従って、recordingsディレクトリに移動する
     - ファイル名は、または"{id}_(TL15|IP13|IP14)_*.wav"
-    - idはHCまたはPCから始まり、三桁の数字が続く（例：SP001）
+    - idはHCまたはPCから始まり、三桁の数字が続く（例 : SP001）
     - idと同じ名前のディレクトリをrecordingsに作成する。
     - recordings内のid名のディレクトリの中に、ic_recorder、smartphoneディレクトリを作成する
     - ic_recorderディレクトリには{id}_*.wavを移動する
@@ -26,36 +26,42 @@ def organize_files(folder_path: str) -> None:
     # speechディレクトリのパス
     speech_path = os.path.join(folder_path, "speech")
     # speechディレクトリ内の全ファイルを確認
-    for file_name in os.listdir(speech_path):
-        if pattern.match(file_name):
-            print(file_name)
-            parts = file_name.split("_")
-            id_part = parts[0]
-            dir_name = id_part
+    for root, dirs, files in os.walk(speech_path):
+        for file in files:
+            if pattern.match(file):
+                parts = file.split("_")
+                id_part = parts[0]
+                dir_name = id_part
 
-            # recordings内のターゲットディレクトリ
-            target_dir = os.path.join(recordings_path, dir_name)
-            ic_recorder_dir = os.path.join(target_dir, "ic_recorder")
-            smartphone_dir = os.path.join(target_dir, "smartphone")
+                # recordings内のターゲットディレクトリ
+                target_dir = os.path.join(recordings_path, dir_name)
+                ic_recorder_dir = os.path.join(target_dir, "ic_recorder")
+                smartphone_ip13_dir = os.path.join(target_dir, "smartphone_ip13")
+                smartphone_ip14_dir = os.path.join(target_dir, "smartphone_ip14")
 
-            # ターゲットディレクトリが存在しない場合は作成
-            if not os.path.exists(target_dir):
-                os.makedirs(target_dir)
-            if not os.path.exists(ic_recorder_dir):
-                os.makedirs(ic_recorder_dir)
-            if not os.path.exists(smartphone_dir):
-                os.makedirs(smartphone_dir)
+                # ターゲットディレクトリが存在しない場合は作成
+                if not os.path.exists(target_dir):
+                    os.makedirs(target_dir)
+                if not os.path.exists(ic_recorder_dir):
+                    os.makedirs(ic_recorder_dir)
+                if not os.path.exists(smartphone_ip13_dir):
+                    os.makedirs(smartphone_ip13_dir)
+                if not os.path.exists(smartphone_ip14_dir):
+                    os.makedirs(smartphone_ip14_dir)
 
-            # ファイルの移動
-            source_file = os.path.join(speech_path, file_name)
-            if "TL15" in file_name:
-                destination_file = os.path.join(ic_recorder_dir, file_name)
-            elif ("IP13" in file_name) or ("IP14" in file_name):
-                destination_file = os.path.join(smartphone_dir, file_name)
-            else:
-                raise ValueError(f"Unexpected file name: {file_name}")
+                # ファイルの移動
+                source_file = os.path.join(root, file)
+                print(f"source_file: {source_file}")
+                if "TL15" in file:
+                    destination_file = os.path.join(ic_recorder_dir, file)
+                elif ("IP13" in file):
+                    destination_file = os.path.join(smartphone_ip13_dir, file)
+                elif ("IP14" in file):
+                    destination_file = os.path.join(smartphone_ip14_dir, file)
+                else:
+                    raise ValueError(f"Unexpected file name: {file}")
 
-            shutil.copyfile(source_file, destination_file)
+                shutil.copyfile(source_file, destination_file)
 
 
 def main() -> None:

@@ -7,6 +7,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import os
+import wave
+import numpy as np
+import pandas as pd
+from decimal import Decimal, ROUND_HALF_UP
 
 
 def wav2array(wav_file: str) -> tuple:
@@ -14,8 +19,12 @@ def wav2array(wav_file: str) -> tuple:
         nchannels, sampwidth, framerate, nframes, comptype, compname = wav.getparams()
         frames = wav.readframes(nframes)
     frames = np.frombuffer(frames, dtype=np.int16)
-    left_channel_frames = frames[::2]
-    right_channel_frames = frames[1::2]
+    if nchannels == 2:
+        left_channel_frames = frames[::2]
+        right_channel_frames = frames[1::2]
+    else:
+        left_channel_frames = frames
+        right_channel_frames = None
     return left_channel_frames, right_channel_frames, framerate
 
 
@@ -35,29 +44,21 @@ class SoundLabeling:
             1030: self.sound_types[6],
         }
         self.df = pd.DataFrame(columns=["start", "end", "sound_type"])
-        self.timestamps: dict = {
-            970: [],
-            980: [],
-            990: [],
-            1000: [],
-            1010: [],
-            1020: [],
-            1030: [],
-        }
+        self.timestamps: dict = {freq: [] for freq in self.peep_frequencies}
 
     def get_peep_timestamps(self) -> None:
         frames, _, framerate = wav2array(wav_file=self.wav_file)
         block_size = int(framerate * 0.25)
         num_blocks = len(frames) // block_size
-        peep_freq = 970
+        peep_freq_index = 0
         is_peep = 0
+
         for i in range(num_blocks):
             block = frames[i * block_size : (i + 1) * block_size]
             fft_result = np.fft.fft(block)
             freqs = np.fft.fftfreq(block.size, d=1 / framerate)
             max_fft_idx = np.abs(fft_result).argmax()
             raw_freq_max = abs(freqs[max_fft_idx])
-            # 一桁目には誤差が生じるので、四捨五入することで一の位を0にする
             freq_max = (
                 Decimal(str(raw_freq_max / 10)).quantize(
                     Decimal("0"), rounding=ROUND_HALF_UP
@@ -65,41 +66,42 @@ class SoundLabeling:
                 * 10
             )
 
-            if freq_max == peep_freq:
+            if abs(freq_max - self.peep_frequencies[peep_freq_index]) <= 1:
                 is_peep += 1
 
             if is_peep == 2:
-                self.timestamps[peep_freq].append(i * block_size / framerate)
+                self.timestamps[self.peep_frequencies[peep_freq_index]].append(i * block_size / framerate)
                 is_peep = 0
-                peep_freq = peep_freq + 10 if peep_freq != 1030 else 970
+                peep_freq_index = (peep_freq_index + 1) % len(self.peep_frequencies)
 
-        self.timestamps[970].append(len(frames) / framerate)
+        self.timestamps[self.peep_frequencies[0]].append(len(frames) / framerate)
 
     def timestamp_to_df(self) -> None:
+        print(self.timestamps)
         for i in range(3):  # 3回の録音分処理を繰り返す
-            for key, _ in self.timestamps.items():
-                start_freq = key
-                end_freq = key + 10 if key != 1030 else 970
-                sound_type = self.freq2sound[key]
-                start_time = self.timestamps[start_freq][0]
-                end_time = self.timestamps[end_freq][0] - 0.25
-                self.df = pd.concat(
-                    [
-                        self.df,
-                        pd.DataFrame(
-                            [
-                                [start_time, end_time, f"{sound_type}_{i + 1:02d}"]
-                            ],  # 01, 02, 03のように喘息データセットと同様の名前になるようにゼロ埋めする。
-                            columns=["start", "end", "sound_type"],
-                        ),
-                    ],
-                    ignore_index=True,
-                )
-                self.timestamps[start_freq].pop(0)
+            for freq in self.peep_frequencies:
+                start_freq = freq
+                end_freq = self.peep_frequencies[(self.peep_frequencies.index(freq) + 1) % len(self.peep_frequencies)]
+                sound_type = self.freq2sound[freq]
+                if self.timestamps[start_freq] and self.timestamps[end_freq]:
+                    start_time = self.timestamps[start_freq][0]
+                    end_time = self.timestamps[end_freq][0] - 0.25
+                    self.df = pd.concat(
+                        [
+                            self.df,
+                            pd.DataFrame(
+                                [
+                                    [start_time, end_time, f"{sound_type}_{i + 1:02d}"]
+                                ],
+                                columns=["start", "end", "sound_type"],
+                            ),
+                        ],
+                        ignore_index=True,
+                    )
+                    self.timestamps[start_freq].pop(0)
 
         txt_file_path = f"{self.wav_file.split('.')[0]}_tmp.txt"
         self.df.to_csv(txt_file_path, sep="\t", index=False, header=False)
-
 
 class ProgressBarWindow(tk.Toplevel):
     def __init__(self, master: Any, total_files: Any):
@@ -150,12 +152,13 @@ class SoundLabelingApp:
         wav_files_full_path = []
 
         # os.walkを使用してディレクトリを再帰的に探索
-        for root, _, files in os.walk(folder_path):
+        for root, dirs, files in os.walk(folder_path):
             for file in files:
                 if file.lower().endswith(".wav"):
                     # フルパスをwav_filesに追加
                     wav_files_full_path.append(os.path.join(root, file))
         total_files = len(wav_files_full_path)
+        print(wav_files_full_path)
 
         # プログレスバーを含む新しいウィンドウを開く
         progress_window = ProgressBarWindow(self.master, total_files)
