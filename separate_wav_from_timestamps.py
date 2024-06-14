@@ -13,13 +13,17 @@ def split_wav_from_timestamps(folder_name: str = "recordings") -> None:
         for file in files:
             if file.lower().endswith(".wav"):
                 wav_files_full_path.append(os.path.join(root, file))
-    print(root)
+
     selected_channel_logger = pd.DataFrame(columns=["device", "wav_file", "selected_channel", "rms_level"])
     for wav_file in wav_files_full_path:
         timestamps_file = f"{wav_file.split('.')[0]}.txt"
         audio = AudioSegment.from_wav(wav_file)
 
-        timestamps_df = pd.read_csv(timestamps_file, sep="\t", header=None, names=["start", "end", "sound_type"])
+        try:
+            timestamps_df = pd.read_csv(timestamps_file, sep="\t", header=None, names=["start", "end", "sound_type"])
+        except FileNotFoundError:
+            continue
+        
         for _, row in timestamps_df.iterrows():
             start_time = int(row["start"] * 1000)
             end_time = int(row["end"] * 1000)
