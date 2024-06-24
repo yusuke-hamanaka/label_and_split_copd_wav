@@ -53,7 +53,7 @@ def split_wav_from_timestamps(folder_name: str = "recordings") -> None:
 def get_louder_and_unsaturated_channel(channels: list[AudioSegment]) -> AudioSegment:
     channels_array = [np.array(channel.get_array_of_samples()) for channel in channels]
     max_possible_value = np.iinfo(channels_array[0].dtype).max
-    max_allowed_value = max_possible_value * 0.99
+    max_allowed_value = max_possible_value * 0.999
     is_saturated = [np.any(np.abs(channel) > max_allowed_value) for channel in channels_array]
     if all(is_saturated):
         raise ValueError("All channels are saturated")
