@@ -7,11 +7,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import os
-import wave
-import numpy as np
-import pandas as pd
-from decimal import Decimal, ROUND_HALF_UP
 
 
 def wav2array(wav_file: str) -> tuple:
@@ -59,12 +54,7 @@ class SoundLabeling:
             freqs = np.fft.fftfreq(block.size, d=1 / framerate)
             max_fft_idx = np.abs(fft_result).argmax()
             raw_freq_max = abs(freqs[max_fft_idx])
-            freq_max = (
-                Decimal(str(raw_freq_max / 10)).quantize(
-                    Decimal("0"), rounding=ROUND_HALF_UP
-                )
-                * 10
-            )
+            freq_max = Decimal(str(raw_freq_max / 10)).quantize(Decimal("0"), rounding=ROUND_HALF_UP) * 10
 
             if abs(freq_max - self.peep_frequencies[peep_freq_index]) <= 1:
                 is_peep += 1
@@ -90,9 +80,7 @@ class SoundLabeling:
                         [
                             self.df,
                             pd.DataFrame(
-                                [
-                                    [start_time, end_time, f"{sound_type}_{i + 1:02d}"]
-                                ],
+                                [[start_time, end_time, f"{sound_type}_{i + 1:02d}"]],
                                 columns=["start", "end", "sound_type"],
                             ),
                         ],
@@ -102,6 +90,7 @@ class SoundLabeling:
 
         txt_file_path = f"{self.wav_file.split('.')[0]}_tmp.txt"
         self.df.to_csv(txt_file_path, sep="\t", index=False, header=False)
+
 
 class ProgressBarWindow(tk.Toplevel):
     def __init__(self, master: Any, total_files: Any):
@@ -133,14 +122,10 @@ class SoundLabelingApp:
         self.master = master
         master.title("Sound Labeling App")
 
-        self.label = tk.Label(
-            master, text="WAVファイルのあるフォルダを選択してください"
-        )
+        self.label = tk.Label(master, text="WAVファイルのあるフォルダを選択してください")
         self.label.pack(padx=10, pady=10)
 
-        self.select_folder_button = tk.Button(
-            master, text="フォルダ選択", command=self.select_and_process_folder
-        )
+        self.select_folder_button = tk.Button(master, text="フォルダ選択", command=self.select_and_process_folder)
         self.select_folder_button.pack(pady=10)
 
     def select_and_process_folder(self) -> None:
@@ -177,10 +162,27 @@ class SoundLabelingApp:
         progress_window.destroy()
 
 
+def make_label_file(folder_path: str) -> None:
+    wav_files_full_path = []
+
+    # os.walkを使用してディレクトリを再帰的に探索
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            if file.lower().endswith(".wav"):
+                # フルパスをwav_filesに追加
+                wav_files_full_path.append(os.path.join(root, file))
+    print(wav_files_full_path)
+
+    total_file_num = len(wav_files_full_path)
+    for i, wav_file_path in enumerate(wav_files_full_path, start=1):
+        print(f"{i}/{total_file_num}: {wav_file_path}")
+        sl = SoundLabeling(wav_file_path)
+        sl.get_peep_timestamps()
+        sl.timestamp_to_df()
+
+
 def main() -> None:
-    root = tk.Tk()
-    app = SoundLabelingApp(root)
-    root.mainloop()
+    make_label_file("recordings")
 
 
 if __name__ == "__main__":
