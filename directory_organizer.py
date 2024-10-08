@@ -54,9 +54,9 @@ def organize_files(folder_path: str) -> None:
                 print(f"source_file: {source_file}")
                 if "TL15" in file:
                     destination_file = os.path.join(ic_recorder_dir, file)
-                elif ("IP13" in file):
+                elif "IP13" in file:
                     destination_file = os.path.join(smartphone_ip13_dir, file)
-                elif ("IP14" in file):
+                elif "IP14" in file:
                     destination_file = os.path.join(smartphone_ip14_dir, file)
                 else:
                     raise ValueError(f"Unexpected file name: {file}")
