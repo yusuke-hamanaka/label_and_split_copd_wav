@@ -13,17 +13,12 @@ def split_wav_from_timestamps(folder_name: str = "recordings") -> None:
         for file in files:
             if file.lower().endswith(".wav"):
                 wav_files_full_path.append(os.path.join(root, file))
-
     selected_channel_logger = pd.DataFrame(columns=["device", "wav_file", "selected_channel", "rms_level"])
     for wav_file in wav_files_full_path:
         timestamps_file = f"{wav_file.split('.')[0]}.txt"
         audio = AudioSegment.from_wav(wav_file)
 
-        try:
-            timestamps_df = pd.read_csv(timestamps_file, sep="\t", header=None, names=["start", "end", "sound_type"])
-        except FileNotFoundError:
-            continue
-        
+        timestamps_df = pd.read_csv(timestamps_file, sep="\t", header=None, names=["start", "end", "sound_type"])
         for _, row in timestamps_df.iterrows():
             start_time = int(row["start"] * 1000)
             end_time = int(row["end"] * 1000)
@@ -53,7 +48,7 @@ def split_wav_from_timestamps(folder_name: str = "recordings") -> None:
 def get_louder_and_unsaturated_channel(channels: list[AudioSegment]) -> AudioSegment:
     channels_array = [np.array(channel.get_array_of_samples()) for channel in channels]
     max_possible_value = np.iinfo(channels_array[0].dtype).max
-    max_allowed_value = max_possible_value * 0.999
+    max_allowed_value = max_possible_value * 0.99
     is_saturated = [np.any(np.abs(channel) > max_allowed_value) for channel in channels_array]
     if all(is_saturated):
         raise ValueError("All channels are saturated")
